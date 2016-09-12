@@ -1,0 +1,37 @@
+#!/usr/bin/env python3.5
+
+"""
+Calibration curves for data covertion of pressure assisted sintering
+
+
+
+"""
+
+import matplotlib.pyplot as plt
+import numpy as np
+
+
+################ Thermocouple  ################
+
+Temperature = [0, 100]
+TC_voltage = [18.616368E-3, 853.717307E-3]
+
+plt.figure(1)
+
+plt.plot(TC_voltage, Temperature), 'k-o'
+
+plt.xlim(-2, 102)
+
+plt.xlabel('Voltage (V)')
+plt.ylabel(r'Temperature ^{\circ}C')
+
+plt.show()
+
+
+################ Load cell ################
+
+
+
+
+
+################ LVDT ################
