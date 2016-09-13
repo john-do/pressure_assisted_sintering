@@ -1,0 +1,14 @@
+
+def trythis():
+    return 'something'
+
+
+class MyClass:
+    def __init__(self):
+        self.test = trythis()
+
+
+
+classy = MyClass()
+
+print(MyClass.test)
