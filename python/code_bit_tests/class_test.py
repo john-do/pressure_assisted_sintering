@@ -29,7 +29,7 @@ classy.printme()
 print(classy.OtherConstant)
 print(classy.text.myDiameter)
 
-"""
+################################################################
 
 class Sample:
 
@@ -48,3 +48,22 @@ mySample = Sample()
 
 print(mySample.initial_length)
     
+"""
+
+################################################################
+
+class myClass:
+    def __init__(self):
+        self.x = 123
+
+
+class secondClass:
+
+    def __init__(self, importClass):
+        print(importClass.x)
+
+
+class1 = myClass()
+
+class2 =secondClass(class1)
+        
