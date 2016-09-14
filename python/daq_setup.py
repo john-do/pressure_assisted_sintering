@@ -21,8 +21,10 @@ File Output:
 debug = False
 
 import time
+import threading
 from PyDAQmx import *
 from numpy import zeros, mean, float64
+
 
 ################################    DAQ Class    ################################
 
@@ -78,7 +80,6 @@ class DaqMeasurement:
         self.deviceName = deviceName
         self.analog_input = self.daq_setup(self.deviceName)
 
-
     def read_daq(self):
         if debug:
             print("Read daq entered")
@@ -87,11 +88,7 @@ class DaqMeasurement:
         self.analog_input.ReadAnalogF64(100, 10.0,  DAQmx_Val_GroupByChannel, self.data, 300, byref(self.read), None)
 
         temperature, loadcell, length = self.convert_data(self.data) ### HOW IS DATA VARIABLE TREATED INSIDE THE CLASS???????????
-            
-        if debug:
-            print("Read daq done")
-            print(temperature)
-            
+
         return temperature, loadcell, length
  
         
@@ -122,10 +119,6 @@ class DaqMeasurement:
         return temperature, load, length
             
     def kill_daq(self):
-        if debug:
-        
-            print(type(self.analog_input))
-        
         del self
 
 
@@ -147,42 +140,44 @@ class FileIO:
         self.log_file.write('Pressure Assisted Sintering\t%s\n' %  date)
         self.log_file.write('Inital sample thickness:\t%s\tmm\n' % sample.initial_length)
         self.log_file.write('Inital sample diameter:\t%s\tmm\n' % sample.initial_diameter)
-        #TODO CHECK FOR OTHER PARAMTERTE MATERIAL; PRESSURE; E-FIELD; CURRENT LIMIT if mySample.material()
+        #TODO CHECK FOR OTHER PARAMETERS: MATERIAL; PRESSURE; E-FIELD; CURRENT LIMIT if mySample.material()
         
         self.log_file.write('')
         self.log_file.write('#\tClock Time\tElapsed Time [s]\tT [C]\tLoad [N]\tdL [mm]\n')
-
+        
+        #Set up timing mechanisms
+        
+        timing_rate = input("Choose recording interval (s) (Default 1/second): ")
+        
+        if timing_rate is None:
+            self.sampling_rate = 1.0
+        else:
+            self.sampling_rate = float(timing_rate)
         
         self.start_time = None
+        self.elapsed_time = 0
         #return self.log_file
 
     def set_start_time(self):
-        if debug:
-            print("entered set_start_time")
         self.start_time = time.time()
         
-        if debug:
-            print("set_start_time set")
+    def get_elapsed_time(self):
+        return time.time()-self.start_time
         
-
     def write_to_file(self,i,measured_data):
-    
+        now =  time.strftime('%H:%M:%S')
+        elapsed_time = self.get_elapsed_time()
+        
         if measured_data[0] is None:
-            now =  time.strftime('%H:%M:%S')
-            elapsed_time = time.time()-self.start_time
-            self.log_file.write('%i\t%s\t%d\t--\t--\t--\n' % (i, now,elapsed_time)) 
+            self.log_file.write('%i\t%s\t%d\t--\t--\t--\n' % (i, now, elapsed_time)) 
         else:
             temperature = measured_data[0]
             load = measured_data[1]
             length = measured_data[2]
-            now =  time.strftime('%H:%M:%S')
-            elapsed_time = time.time()-self.start_time
-            self.log_file.write('%i\t%s\t%f\t%f\t%f\t%f\n' % (i, now,elapsed_time, temperature, load, length))
+            self.log_file.write('%i\t%s\t%f\t%f\t%f\t%f\n' % (i, now, elapsed_time, temperature, load, length))
 
     def close_file(self):
         self.log_file.close()
-        if debug:
-            print("File closed")
         
 ################################    Sample Class    ################################
 class Sample:
@@ -225,27 +220,32 @@ def main():
 
     
     #start measurement loop
-    i = 0
+    loops_run = 0
+    samples_written = 0
+    next_sample_time = 0
     
     myFile.set_start_time()
     
-    if debug:
-        print("Start time set as: " + str(myFile.start_time))
     try:
         while True:
             if debug:
                 print("loop started")
         
-            i= i+1
+            loops_run = loops_run + 1
             measured_data = myDaq.read_daq()
-            myFile.write_to_file(i,measured_data)
             print(measured_data)
-            if debug:
-                print("loop executed. i = " + str(i))
-                thing = input("paused press enter")
+            
+            #Save to file only at a certain interval
+            # Very rough timer
+            if myFile.get_elapsed_time()>= next_sample_time:
+                samples_written = samples_written + 1 
+                myFile.write_to_file(samples_written,measured_data)
+                next_sample_time = next_sample_time + myFile.sampling_rate
+            
             # Update GUI Displays
     except KeyboardInterrupt:
-        pass
+        print(str(loops_run)+ ' measurements taken')
+    
     #shut down
     myFile.close_file()
     myDaq.kill_daq()
