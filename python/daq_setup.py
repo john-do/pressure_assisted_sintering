@@ -36,9 +36,10 @@ class DaqMeasurement:
     temperatureSlope = 119.746003543    
     temperatureOffset = -2.22923
     loadSlope = 247.258433769
-    loadOffset = -44.3671200508
+    # Calibrated loadOffset = -44.3671200508
+    
     lengthSlope = 0.25
-    lengthOffset = 0
+    
     
             
 
@@ -79,6 +80,11 @@ class DaqMeasurement:
     def __init__(self, deviceName):
         self.deviceName = deviceName
         self.analog_input = self.daq_setup(self.deviceName)
+        
+        #set offsets to zero
+        
+        self.loadOffset = 0
+        self.lengthOffset = 0
 
     def read_daq(self):
         if debug:
@@ -104,20 +110,33 @@ class DaqMeasurement:
         temperatureSlope = 119.746003543    
         temperatureOffset = -2.22923
         loadSlope = 247.258433769
-        loadOffset = -44.3671200508
+        #loadOffset = -44.3671200508
         lengthSlope = 0.25
-        lengthOffset = 0
+        #lengthOffset = 0
         
         Temperature = mean(data[0:99])
         Load = mean(data[100:199])
         Length = mean(data[200:299])
 
         temperature = temperatureSlope * Temperature + temperatureOffset
-        load = loadSlope * Load + loadOffset
-        length = lengthSlope * Length + lengthOffset
+        load = loadSlope * Load + self.loadOffset
+        length = lengthSlope * Length + self.lengthOffset
 
         return temperature, load, length
-            
+    
+    def zero_load_cell(self):
+        input("Press enter when ready when load cell is at zero load:")
+        temperature, loadcell, length = self.read_daq()
+        
+        self.loadOffset = -1* loadcell
+    
+    
+    def zero_lvdt(self):
+        input("Press enter when ready when lvdt is set:")
+        temperature, loadcell, length = self.read_daq()
+        
+        self.lengthOffset = -1* length
+        
     def kill_daq(self):
         del self
 
@@ -149,7 +168,7 @@ class FileIO:
         
         timing_rate = input("Choose recording interval (s) (Default 1/second): ")
         
-        if timing_rate is None:
+        if timing_rate == "":
             self.sampling_rate = 1.0
         else:
             self.sampling_rate = float(timing_rate)
@@ -199,25 +218,20 @@ class Sample:
 def main():
     # Create Sample Descrition
     mySample = Sample()
-    
-    if debug:
-        print(mySample.initial_length)
-        print(mySample.initial_diameter)
-    
+
     # Create file and header
     myFile = FileIO(mySample)
+    
     #Setup DAQ
     myDaq = DaqMeasurement('dev5')
-    if debug:
-        print("Daq class created")
+
     #TODO Connect Keithly and Agilent ????
 
-    #TODO Zero Load cell
-    #myDaq.zero_load_cell()
+    #Zero Load cell
+    myDaq.zero_load_cell()
                          
-    #TODO#Zero lvdt
-    #myDaq.zero_lvdt()
-
+    #Zero lvdt
+    myDaq.zero_lvdt()
     
     #start measurement loop
     loops_run = 0
