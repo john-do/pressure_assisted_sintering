@@ -1,11 +1,11 @@
-#!usr/bin/env python3.5
+#!usr/bin/env python3
 
 """
 Work area for testing NI USB-6009 DAQ
 
-XBAi1: k-type thermocouple, 0 - 10V
-Ai2: 250 kg loadcell, -10V - +10V
-Ai3: LVDT +/- 2.5 mm, -10V - +10V
+ai1: k-type thermocouple, 0 - 10V
+ai2: 250 kg loadcell, -10V - +10V
+ai3: LVDT +/- 2.5 mm, -10V - +10V
 
 Takes average voltage of 100 samples measured at 1 kHz
 
@@ -21,27 +21,20 @@ File Output:
 debug = False
 
 import time
-import threading
 from PyDAQmx import *
 from numpy import zeros, mean, float64
 
 
 ################################    DAQ Class    ################################
 
-
 class DaqMeasurement:
-   
-    #LOADCELLSLOPE = 247.258433769
-    #LVDTSLOPE = 0.25
-    temperatureSlope = 119.746003543    
-    temperatureOffset = -2.22923
-    loadSlope = 247.258433769
-    # Calibrated loadOffset = -44.3671200508
-    
-    lengthSlope = 0.25
-    
-    
-            
+    # Values from calibration of transducers
+    # LOADCELLSLOPE = 247.258433769
+    # LVDTSLOPE = 0.25
+    # temperatureSlope = 119.746003543    
+    # temperatureOffset = -2.22923
+    # loadSlope = 247.258433769
+    # loadOffset = -44.3671200508
 
     def daq_setup(self,deviceName):
         #create channel names based on deviceName
@@ -67,22 +60,15 @@ class DaqMeasurement:
         
         if debug:
             print("DAQ Configured")
-            
-            print(self.data)
-            print(type(self.analog_input))
+
         return self.analog_input
 
-    #TODO def zero_lvdt(self):
-    #   self.read_daq(analog_input)
-
-    #TODO def zero_load_cell(self):
     
     def __init__(self, deviceName):
         self.deviceName = deviceName
         self.analog_input = self.daq_setup(self.deviceName)
         
-        #set offsets to zero
-        
+        #initialize loadcell and lvdt offsets to zero
         self.loadOffset = 0
         self.lengthOffset = 0
 
@@ -125,6 +111,7 @@ class DaqMeasurement:
         return temperature, load, length
     
     def zero_load_cell(self):
+        
         input("Press enter when ready when load cell is at zero load:")
         temperature, loadcell, length = self.read_daq()
         
@@ -132,12 +119,14 @@ class DaqMeasurement:
     
     
     def zero_lvdt(self):
+        #Adjusts lengthOffset to zero at current value
         input("Press enter when ready when lvdt is set:")
         temperature, loadcell, length = self.read_daq()
         
         self.lengthOffset = -1* length
         
     def kill_daq(self):
+        #deletes object
         del self
 
 
@@ -169,18 +158,20 @@ class FileIO:
         timing_rate = input("Choose recording interval (s) (Default 1/second): ")
         
         if timing_rate == "":
+            #default timing interval 1measurement / second
             self.sampling_rate = 1.0
         else:
             self.sampling_rate = float(timing_rate)
         
         self.start_time = None
         self.elapsed_time = 0
-        #return self.log_file
-
+        
     def set_start_time(self):
+        #Initializes start time
         self.start_time = time.time()
         
     def get_elapsed_time(self):
+        #gives elpased time since start_time in seconds
         return time.time()-self.start_time
         
     def write_to_file(self,i,measured_data):
@@ -199,6 +190,7 @@ class FileIO:
         self.log_file.close()
         
 ################################    Sample Class    ################################
+
 class Sample:
 
     def __init__(self):
@@ -215,15 +207,15 @@ class Sample:
 ################################    Main    ################################
 ############################################################################
                             
-def main():
+def main(deviceName):
     # Create Sample Descrition
     mySample = Sample()
 
-    # Create file and header
+    # Create file and header, set timing setup
     myFile = FileIO(mySample)
     
     #Setup DAQ
-    myDaq = DaqMeasurement('dev5')
+    myDaq = DaqMeasurement(deviceName)
 
     #TODO Connect Keithly and Agilent ????
 
@@ -236,14 +228,12 @@ def main():
     #start measurement loop
     loops_run = 0
     samples_written = 0
-    next_sample_time = 0
+    next_save_time = 0
     
     myFile.set_start_time()
     
     try:
         while True:
-            if debug:
-                print("loop started")
         
             loops_run = loops_run + 1
             measured_data = myDaq.read_daq()
@@ -251,21 +241,23 @@ def main():
             
             #Save to file only at a certain interval
             # Very rough timer
-            if myFile.get_elapsed_time()>= next_sample_time:
+            if myFile.get_elapsed_time()>= next_save_time:
                 samples_written = samples_written + 1 
                 myFile.write_to_file(samples_written,measured_data)
-                next_sample_time = next_sample_time + myFile.sampling_rate
+                next_sample_time = next_save_time + myFile.sampling_rate
             
             # Update GUI Displays
     except KeyboardInterrupt:
+        #Measurement ends with Ctrl+c
         print(str(loops_run)+ ' measurements taken')
     
-    #shut down
+    #Clean up after measurement complete
     myFile.close_file()
     myDaq.kill_daq()
                              
 
 if __name__ == '__main__':
-    main()
+    deviceName = 'dev5'
+    main(deviceName)
     
 
