@@ -1,0 +1,32 @@
+from PyQt4.QtCore import *
+from PyQt4.QtGui import *
+
+class ReadoutWindow(QMainWindow):
+
+    def __init__(self):
+        super(ReadoutWindow, self).__init__(parent)
+
+
+
+        self.create_menu()
+        #self.create_displays()
+
+
+    def create_menu():
+        self.file_menu = self.menuBar().addMenu('&File')
+    
+
+
+
+
+def main():
+    app = QApplication(sys.argv)
+    form = ReadoutWindow()
+    form.show()
+    
+    
+
+
+
+if __name__ == '__main__':
+    main()

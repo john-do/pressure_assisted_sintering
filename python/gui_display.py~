@@ -1,0 +1,18 @@
+#!usr/bin/env python3
+
+"""
+Basic Display Rpeating readouts on Pressure assisted 
+
+
+
+"""
+
+import sys
+from PyQt4 import QtGui
+
+app = QtGui.QApplication(sys.argv)
+
+window = QtGui.QWidget()
+
+
+window.show()
